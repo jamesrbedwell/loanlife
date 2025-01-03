@@ -12,28 +12,29 @@ import { calculateAmortizationSchedule, formatCurrency } from "@/lib/utils";
 import {
   LineChart,
   Line,
-  XAxis,
-  YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
+  XAxis,
+  YAxis,
 } from "recharts";
 
+interface Month {
+  month: number;
+  payment: number;
+  principalPayment: number;
+  interestPayment: number;
+  remainingPrincipal: number;
+  totalInterest: number;
+  totalPrincipal: number;
+}
 interface ResultsData {
   monthlyPayment: number;
   totalInterest: number;
   totalPrincipal: number;
   totalPayments: number;
-  schedule: {
-    month: number;
-    payment: number;
-    principalPayment: number;
-    interestPayment: number;
-    remainingPrincipal: number;
-    totalInterest: number;
-    totalPrincipal: number;
-  }[];
+  schedule: Month[];
 }
 
 export default function Results() {
@@ -75,7 +76,7 @@ export default function Results() {
     if (!results) return null;
     return (
       results.schedule.findIndex(
-        (month) => month.principalPayment > month.interestPayment
+        (month: Month) => month.principalPayment > month.interestPayment
       ) + 1
     );
   }, [results]);
