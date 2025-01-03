@@ -37,7 +37,7 @@ interface ResultsData {
   schedule: Month[];
 }
 
-function Results() {
+function ResultsSuspense() {
   const searchParams = useSearchParams();
   const [appreciationRate, setAppreciationRate] = useState(2);
 
@@ -416,9 +416,10 @@ function Results() {
     </main>
   );
 }
-
-export default function ResultsPage() {
-  <Suspense>
-    <Results />
-  </Suspense>;
+export default function Results() {
+  return (
+    <Suspense>
+      <ResultsSuspense />
+    </Suspense>
+  );
 }

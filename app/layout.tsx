@@ -6,9 +6,6 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "LoanLife",
   description: "Understand your loan's true cost",
-
-  themeColor: "#10b981",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
 export default function RootLayout({

@@ -217,7 +217,7 @@ export default function HomeContent() {
                 Clear History
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {searchHistory.map((search: SearchHistory, index: number) => (
                 <Card
                   // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
