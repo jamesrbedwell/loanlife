@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +37,7 @@ interface ResultsData {
   schedule: Month[];
 }
 
-export default function Results() {
+function Results() {
   const searchParams = useSearchParams();
   const [appreciationRate, setAppreciationRate] = useState(2);
 
@@ -415,4 +415,10 @@ export default function Results() {
       </div>
     </main>
   );
+}
+
+export default function ResultsPage() {
+  <Suspense>
+    <Results />
+  </Suspense>;
 }
