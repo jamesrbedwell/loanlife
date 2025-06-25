@@ -24,6 +24,7 @@ export function calculateAmortizationSchedule(
 	principal: number,
 	annualRate: number,
 	years: number,
+	extraPayment: number = 0
 ) {
 	const monthlyRate = annualRate / 12;
 	const numberOfPayments = years * 12;
@@ -33,10 +34,17 @@ export function calculateAmortizationSchedule(
 	let remainingPrincipal = principal;
 	let totalInterest = 0;
 	let totalPrincipal = 0;
+	let payoffMonth = 0;
 
 	for (let month = 1; month <= numberOfPayments; month++) {
+		const payment = monthlyPayment + extraPayment;
 		const interestPayment = remainingPrincipal * monthlyRate;
-		const principalPayment = monthlyPayment - interestPayment;
+		let principalPayment = payment - interestPayment;
+
+		// Prevent overpaying in the last month
+		if (principalPayment > remainingPrincipal) {
+			principalPayment = remainingPrincipal;
+		}
 
 		remainingPrincipal -= principalPayment;
 		totalInterest += interestPayment;
@@ -44,13 +52,18 @@ export function calculateAmortizationSchedule(
 
 		schedule.push({
 			month,
-			payment: monthlyPayment,
+			payment: principalPayment + interestPayment,
 			principalPayment,
 			interestPayment,
-			remainingPrincipal,
+			remainingPrincipal: Math.max(remainingPrincipal, 0),
 			totalInterest,
 			totalPrincipal,
 		});
+
+		if (remainingPrincipal <= 0 && payoffMonth === 0) {
+			payoffMonth = month;
+			break;
+		}
 	}
 
 	return {
@@ -58,6 +71,7 @@ export function calculateAmortizationSchedule(
 		totalInterest,
 		totalPrincipal,
 		totalPayment: totalInterest + principal,
+		payoffMonth: payoffMonth || numberOfPayments,
 	};
 }
 

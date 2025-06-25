@@ -20,36 +20,36 @@ interface SearchHistory {
 
 export default function HomeContent() {
   const router = useRouter();
-  const [propertyPrice, setPropertyPrice] = useState(() => {
+  const [propertyPrice, setPropertyPrice] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return Number(localStorage.getItem("propertyPrice")) || 500000;
+      return localStorage.getItem("propertyPrice") || "500000";
     }
-    return 500000;
+    return "500000";
   });
-  const [deposit, setDeposit] = useState(() => {
+  const [deposit, setDeposit] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return Number(localStorage.getItem("deposit")) || 100000;
+      return localStorage.getItem("deposit") || "100000";
     }
-    return 100000;
+    return "100000";
   });
-  const [interestRate, setInterestRate] = useState(() => {
+  const [interestRate, setInterestRate] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return Number(localStorage.getItem("interestRate")) || 3;
+      return localStorage.getItem("interestRate") || "3";
     }
-    return 6;
+    return "6";
   });
-  const [loanTerm, setLoanTerm] = useState(() => {
+  const [loanTerm, setLoanTerm] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return Number(localStorage.getItem("loanTerm")) || 30;
+      return localStorage.getItem("loanTerm") || "30";
     }
-    return 30;
+    return "30";
   });
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   useEffect(() => {
-    localStorage.setItem("propertyPrice", propertyPrice.toString());
-    localStorage.setItem("deposit", deposit.toString());
-    localStorage.setItem("interestRate", interestRate.toString());
-    localStorage.setItem("loanTerm", loanTerm.toString());
+    localStorage.setItem("propertyPrice", propertyPrice || "0");
+    localStorage.setItem("deposit", deposit || "0");
+    localStorage.setItem("interestRate", interestRate || "0");
+    localStorage.setItem("loanTerm", loanTerm || "0");
   }, [propertyPrice, deposit, interestRate, loanTerm]);
 
   useEffect(() => {
@@ -61,10 +61,10 @@ export default function HomeContent() {
 
   const handleCalculate = () => {
     const newSearch: SearchHistory = {
-      propertyPrice,
-      deposit,
-      interestRate,
-      loanTerm,
+      propertyPrice: Number(propertyPrice) || 0,
+      deposit: Number(deposit) || 0,
+      interestRate: Number(interestRate) || 0,
+      loanTerm: Number(loanTerm) || 0,
       date: new Date().toISOString(),
     };
 
@@ -127,9 +127,11 @@ export default function HomeContent() {
                   type="number"
                   value={propertyPrice}
                   onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setPropertyPrice(value);
-                    localStorage.setItem("propertyPrice", value.toString());
+                    const value = e.target.value;
+                    if (/^\d*$/.test(value)) {
+                      setPropertyPrice(value);
+                      localStorage.setItem("propertyPrice", value || "0");
+                    }
                   }}
                   className="bg-white/10 border-0 text-primary-foreground mt-2"
                 />
@@ -143,9 +145,11 @@ export default function HomeContent() {
                   type="number"
                   value={deposit}
                   onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setDeposit(value);
-                    localStorage.setItem("deposit", value.toString());
+                    const value = e.target.value;
+                    if (/^\d*$/.test(value)) {
+                      setDeposit(value);
+                      localStorage.setItem("deposit", value || "0");
+                    }
                   }}
                   className="bg-white/10 border-0 text-primary-foreground mt-2"
                 />
@@ -162,9 +166,11 @@ export default function HomeContent() {
                   type="number"
                   value={interestRate}
                   onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setInterestRate(value);
-                    localStorage.setItem("interestRate", value.toString());
+                    const value = e.target.value;
+                    if (/^\d*\.?\d*$/.test(value)) {
+                      setInterestRate(value);
+                      localStorage.setItem("interestRate", value || "0");
+                    }
                   }}
                   className="bg-white/10 border-0 text-primary-foreground mt-2"
                   step="0.1"
@@ -182,9 +188,11 @@ export default function HomeContent() {
                   type="number"
                   value={loanTerm}
                   onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setLoanTerm(value);
-                    localStorage.setItem("loanTerm", value.toString());
+                    const value = e.target.value;
+                    if (/^\d*$/.test(value)) {
+                      setLoanTerm(value);
+                      localStorage.setItem("loanTerm", value || "0");
+                    }
                   }}
                   className="bg-white/10 border-0 text-primary-foreground mt-2"
                 />
