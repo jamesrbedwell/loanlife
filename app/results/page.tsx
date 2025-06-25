@@ -58,12 +58,8 @@ function ResultsSuspense() {
   const [appreciationRate, setAppreciationRate] = useState("2");
   const [extraPayment, setExtraPayment] = useState("0");
   const [showOverpayment, setShowOverpayment] = useState(true);
-  const [spiralInitialPrice, setSpiralInitialPrice] = useState("0");
-  const [spiralDepositPct, setSpiralDepositPct] = useState("0");
-  const [spiralYearsBetween, setSpiralYearsBetween] = useState("0");
-  const [spiralLoanCarryPct, setSpiralLoanCarryPct] = useState("0");
-  const [spiralPropIncreasePct, setSpiralPropIncreasePct] = useState("0");
-  const [spiralNumMoves, setSpiralNumMoves] = useState("0");
+  const [sellAfterYears, setSellAfterYears] = useState("10");
+
 
   const results = useMemo<ResultsData | null>(() => {
     const propertyPrice = Number(searchParams.get("propertyPrice"));
@@ -114,10 +110,28 @@ function ResultsSuspense() {
     const annualAppreciationRate = (Number(appreciationRate) || 0) / 100;
     const projectedValue =
       propertyPrice * (1 + annualAppreciationRate) ** loanTerm;
-    const potentialEquityAtEndOfLoan =
-      projectedValue - (propertyPrice - deposit);
+    const potentialEquityAtEndOfLoan = projectedValue;
     const equityGrowth = potentialEquityAtEndOfLoan - deposit;
     const averageEquityGrowthPerYear = equityGrowth / loanTerm;
+
+    // Early sale calculations
+    const sellAfterYearsNum = Number(sellAfterYears) || 0;
+    const earlySaleValue = propertyPrice * (1 + annualAppreciationRate) ** sellAfterYearsNum;
+
+    // Calculate remaining loan balance at early sale point
+    const earlySaleMonth = sellAfterYearsNum * 12;
+    const earlySaleSchedule = results.schedule[earlySaleMonth - 1];
+    const remainingLoanBalance = earlySaleSchedule ? earlySaleSchedule.remainingPrincipal : 0;
+    const earlySaleEquity = earlySaleValue - remainingLoanBalance;
+
+    // Calculate total amount repaid up to early sale point
+    const totalRepaidUpToSale = earlySaleSchedule ?
+      (earlySaleSchedule.totalPrincipal + earlySaleSchedule.totalInterest) : 0;
+    const interestPaidUpToSale = earlySaleSchedule ? earlySaleSchedule.totalInterest : 0;
+    const principalPaidUpToSale = earlySaleSchedule ? earlySaleSchedule.totalPrincipal : 0;
+    const totalInvestmentAndCosts = deposit + principalPaidUpToSale + interestPaidUpToSale;
+    const netProfitLoss = earlySaleEquity - totalInvestmentAndCosts;
+
     return {
       initialValue: propertyPrice,
       requiredValue,
@@ -128,8 +142,17 @@ function ResultsSuspense() {
       equityGrowth,
       averageEquityGrowthPerYear,
       loanTerm,
+      sellAfterYears: sellAfterYearsNum,
+      earlySaleValue,
+      earlySaleEquity,
+      remainingLoanBalance,
+      totalRepaidUpToSale,
+      interestPaidUpToSale,
+      principalPaidUpToSale,
+      totalInvestmentAndCosts,
+      netProfitLoss,
     };
-  }, [results, searchParams, appreciationRate]);
+  }, [results, searchParams, appreciationRate, sellAfterYears]);
 
   // Overpayment scenario
   const overpayResults = useMemo(() => {
@@ -200,6 +223,13 @@ function ResultsSuspense() {
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
       setAppreciationRate(value);
+    }
+  };
+
+  const handleSellAfterYearsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setSellAfterYears(value);
     }
   };
 
@@ -519,106 +549,291 @@ function ResultsSuspense() {
           </TabsContent>
           <TabsContent value="projections">
             {/* Property Value Projections */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid gap-6">
+              {/* Current Property Overview */}
               <Card className="bg-secondary/10 border-secondary/20 overflow-hidden">
                 <CardHeader className="px-4 md:px-6">
-                  <CardTitle className="text-xl">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <span className="text-2xl">🏠</span>
                     Current Property Overview
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 md:px-6 space-y-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Current Property Value
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(propertyProjections.initialValue)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Break-Even Property Value
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(propertyProjections.requiredValue)}
-                    </p>
+                <CardContent className="px-4 md:px-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="bg-background/50 rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Current Property Value
+                        </p>
+                        <p className="text-2xl font-bold text-primary">
+                          {formatCurrency(propertyProjections.initialValue)}
+                        </p>
+                      </div>
+                      <div className="bg-background/50 rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Break-Even Property Value
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {formatCurrency(propertyProjections.requiredValue)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Value needed to cover total loan cost
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Future Projections */}
               <Card className="bg-primary/10 border-primary/20 overflow-hidden">
                 <CardHeader className="px-4 md:px-6">
-                  <CardTitle className="text-xl">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <span className="text-2xl">📈</span>
                     Future Property Projections
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4 md:px-6 space-y-2">
-                  <div>
-                    <Label htmlFor="appreciationRate" className="text-sm">
-                      Estimated Annual Appreciation Rate (%)
+                <CardContent className="px-4 md:px-6 space-y-6">
+                  {/* Appreciation Rate Input */}
+                  <div className="bg-background/50 rounded-lg p-4">
+                    <Label htmlFor="appreciationRate" className="text-sm font-medium">
+                      Estimated Annual Appreciation Rate
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-1 mb-2">
-                      Adjust this value to see how different appreciation rates
-                      affect your property&apos;s future value.
-                    </p>
-                    <Input
-                      id="appreciationRate"
-                      type="text"
-                      value={appreciationRate}
-                      onChange={handleAppreciationRateChange}
-                      className="mt-1"
-                      inputMode="decimal"
-                      pattern="[0-9.]*"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Projected Value at End of Loan
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(propertyProjections.projectedValue)}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        id="appreciationRate"
+                        type="text"
+                        value={appreciationRate}
+                        onChange={handleAppreciationRateChange}
+                        className="flex-1"
+                        inputMode="decimal"
+                        pattern="[0-9.]*"
+                        placeholder="2.0"
+                      />
+                      <span className="text-sm text-muted-foreground">% per year</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Adjust this value to see how different appreciation rates affect your property's future value
                     </p>
                   </div>
-                  <div>
-                    <p
-                      className={`text-sm ${propertyProjections.projectedValue >=
-                        propertyProjections.requiredValue
-                        ? "text-primary"
-                        : "text-destructive"
-                        }`}
-                    >
-                      {propertyProjections.projectedValue >=
-                        propertyProjections.requiredValue
-                        ? "Your property value is projected to exceed the loan cost."
-                        : "Your property value is projected to fall short of the loan cost."}
+
+                  {/* Projection Results */}
+                  <div className="grid gap-4">
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Projected Value at End of Loan
+                      </p>
+                      <p className={`text-2xl font-bold ${propertyProjections.projectedValue >= propertyProjections.requiredValue
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                        }`}>
+                        {formatCurrency(propertyProjections.projectedValue)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        After {propertyProjections.loanTerm} years at {propertyProjections.appreciationRate}% annual growth
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Indicator */}
+                  <div className="bg-background/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium">Investment Outlook</h4>
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${propertyProjections.projectedValue >= propertyProjections.requiredValue
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
+                        <span>
+                          {propertyProjections.projectedValue >= propertyProjections.requiredValue ? '✅' : '❌'}
+                        </span>
+                        {propertyProjections.projectedValue >= propertyProjections.requiredValue
+                          ? 'Profitable'
+                          : 'Loss-making'
+                        }
+                      </div>
+                    </div>
+                    <p className={`text-sm ${propertyProjections.projectedValue >= propertyProjections.requiredValue
+                      ? 'text-green-700 dark:text-green-300'
+                      : 'text-red-700 dark:text-red-300'
+                      }`}>
+                      {propertyProjections.projectedValue >= propertyProjections.requiredValue
+                        ? `Your property is projected to be worth ${formatCurrency(propertyProjections.projectedValue - propertyProjections.requiredValue)} more than the total loan cost.`
+                        : `Your property is projected to be worth ${formatCurrency(propertyProjections.requiredValue - propertyProjections.projectedValue)} less than the total loan cost.`
+                      }
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Potential Equity at Loan End
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(
-                        propertyProjections.potentialEquityAtEndOfLoan
-                      )}
+
+                  {/* Equity Growth Summary */}
+                  <div className="bg-background/50 rounded-lg p-4">
+                    <h4 className="font-medium mb-3">Equity Growth Summary</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Total Equity Growth
+                        </p>
+                        <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                          {formatCurrency(propertyProjections.equityGrowth)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          From your initial deposit of {formatCurrency(propertyProjections.deposit)} to full ownership worth {formatCurrency(propertyProjections.potentialEquityAtEndOfLoan)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Average Annual Growth
+                        </p>
+                        <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                          {formatCurrency(propertyProjections.averageEquityGrowthPerYear)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Per year over {propertyProjections.loanTerm} years
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        <strong>Note:</strong> This calculation accounts for your initial deposit of {formatCurrency(propertyProjections.deposit)} as your starting equity.
+                        The equity growth shows how your investment grows from deposit to full property ownership.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Early Sale Scenario */}
+              <Card className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800 overflow-hidden">
+                <CardHeader className="px-4 md:px-6">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <span className="text-2xl">🏠</span>
+                    Early Sale Scenario
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 md:px-6 space-y-6">
+                  <div className="bg-background/50 rounded-lg p-4">
+                    <Label htmlFor="sellAfterYears" className="text-sm font-medium">
+                      Sell After (Years)
+                    </Label>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        id="sellAfterYears"
+                        type="text"
+                        value={sellAfterYears}
+                        onChange={handleSellAfterYearsChange}
+                        className="flex-1"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="10"
+                      />
+                      <span className="text-sm text-muted-foreground">years</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      See your equity if you sell before the end of your mortgage term
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Total Equity Growth
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(propertyProjections.equityGrowth)}
-                    </p>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Property Value at Sale
+                      </p>
+                      <p className="text-xl font-bold text-primary">
+                        {formatCurrency(propertyProjections.earlySaleValue)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        After {propertyProjections.sellAfterYears} years at {propertyProjections.appreciationRate}% growth
+                      </p>
+                    </div>
+
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Remaining Loan Balance
+                      </p>
+                      <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                        {formatCurrency(propertyProjections.remainingLoanBalance)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Amount still owed on the mortgage
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Average Annual Equity Growth
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Your Equity at Sale
+                      </p>
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(propertyProjections.earlySaleEquity)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Equity minus total investment and costs (deposit + principal + interest)
+                      </p>
+                    </div>
+
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Total Repaid to Date
+                      </p>
+                      <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                        {formatCurrency(propertyProjections.totalRepaidUpToSale)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Principal + interest paid over {propertyProjections.sellAfterYears} years
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Principal Paid
+                      </p>
+                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                        {formatCurrency(propertyProjections.principalPaidUpToSale)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Amount of loan principal repaid
+                      </p>
+                    </div>
+
+                    <div className="bg-background/50 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Interest Paid
+                      </p>
+                      <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                        {formatCurrency(propertyProjections.interestPaidUpToSale)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total interest costs over {propertyProjections.sellAfterYears} years
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-background/50 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Net Profit/Loss
                     </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(
-                        propertyProjections.averageEquityGrowthPerYear
-                      )}
+                    <p className={`text-2xl font-bold ${propertyProjections.netProfitLoss >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                      }`}>
+                      {formatCurrency(propertyProjections.netProfitLoss)}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Equity minus total investment and costs (deposit + principal + interest)
+                    </p>
+                    <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${propertyProjections.netProfitLoss >= 0
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                      }`}>
+                      <span>
+                        {propertyProjections.netProfitLoss >= 0 ? '✅' : '❌'}
+                      </span>
+                      {propertyProjections.netProfitLoss >= 0
+                        ? 'Profitable'
+                        : 'Loss-making'
+                      }
+                    </div>
                   </div>
                 </CardContent>
               </Card>
