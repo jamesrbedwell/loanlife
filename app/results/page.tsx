@@ -455,6 +455,47 @@ function ResultsSuspense() {
                 </p>}
               </CardContent>
             </Card>
+            {/* Yearly Principal vs Interest Table */}
+            <Card className="mb-4">
+              <CardHeader className="px-4 md:px-6">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <span className="text-2xl">📅</span>
+                  Yearly Principal vs Interest
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 md:px-6">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-left font-semibold">Year</TableHead>
+                        <TableHead className="text-right font-semibold">Principal Paid</TableHead>
+                        <TableHead className="text-right font-semibold">Interest Paid</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const years = Math.ceil(results.schedule.length / 12);
+                        const rows = [];
+                        for (let y = 1; y <= years; y++) {
+                          const yearMonths = results.schedule.slice((y - 1) * 12, y * 12);
+                          const principal = yearMonths.reduce((sum, m) => sum + m.principalPayment, 0);
+                          const interest = yearMonths.reduce((sum, m) => sum + m.interestPayment, 0);
+                          rows.push(
+                            <TableRow key={y}>
+                              <TableCell className="text-left">{y}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(principal)}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(interest)}</TableCell>
+                            </TableRow>
+                          );
+                        }
+                        return rows;
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
             {/* Overpayment Analysis Table */}
             <Card className="bg-primary/10 border-primary/20 overflow-hidden mb-4">
               <CardHeader className="px-4 md:px-6">
