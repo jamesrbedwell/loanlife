@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { calculateAmortizationSchedule, formatCurrency } from "@/lib/utils";
 import {
@@ -34,6 +34,16 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/tabs";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Month {
   month: number;
@@ -59,6 +69,7 @@ function ResultsSuspense() {
   const [extraPayment, setExtraPayment] = useState("0");
   const [showOverpayment, setShowOverpayment] = useState(true);
   const [sellAfterYears, setSellAfterYears] = useState("10");
+  const [isAdditionalCostsOpen, setIsAdditionalCostsOpen] = useState(false);
 
 
   const results = useMemo<ResultsData | null>(() => {
@@ -818,14 +829,52 @@ function ResultsSuspense() {
                       <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatCurrency(propertyProjections.interestPaidUpToSale)}</p>
                       <p className="text-xs text-muted-foreground mt-1">Total interest costs over {propertyProjections.sellAfterYears} years</p>
                     </div>
-                    {/* Net Profit/Loss */}
+                    {/* Net Profit/Loss with Additional Costs Alert */}
                     <div className="bg-background/50 rounded-lg p-4">
-                      <p className="text-sm text-muted-foreground mb-1">Net Profit/Loss</p>
-                      <p className={`text-2xl font-bold ${propertyProjections.netProfitLoss >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(propertyProjections.netProfitLoss)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Sale proceeds minus total interest paid</p>
-                      <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${propertyProjections.netProfitLoss >= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
-                        <span>{propertyProjections.netProfitLoss >= 0 ? '✅' : '❌'}</span>
-                        {propertyProjections.netProfitLoss >= 0 ? 'Profitable' : 'Loss-making'}
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        {/* Net Profit/Loss Section */}
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground mb-1">Net Profit/Loss</p>
+                          <p className={`text-2xl font-bold ${propertyProjections.netProfitLoss >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(propertyProjections.netProfitLoss)}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Sale proceeds minus total interest paid</p>
+                          <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${propertyProjections.netProfitLoss >= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+                            <span>{propertyProjections.netProfitLoss >= 0 ? '✅' : '❌'}</span>
+                            {propertyProjections.netProfitLoss >= 0 ? 'Profitable' : 'Loss-making'}
+                          </div>
+                        </div>
+
+                        {/* Additional Costs Alert */}
+                        <div className="flex-1">
+                          <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
+                            <AlertTitle className="text-orange-800 dark:text-orange-200">⚠️ Additional Costs Not Included</AlertTitle>
+                            <AlertDescription className="text-orange-700 dark:text-orange-300">
+                              <p className="mb-2">This profit/loss calculation doesn't include common Australian property transaction costs.</p>
+
+                              <Collapsible open={isAdditionalCostsOpen} onOpenChange={setIsAdditionalCostsOpen}>
+                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-orange-800 dark:text-orange-200 hover:text-orange-900 dark:hover:text-orange-100 transition-colors">
+                                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isAdditionalCostsOpen ? 'rotate-180' : ''}`} />
+                                  View additional costs
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="mt-3">
+                                  <ul className="space-y-1 text-sm">
+                                    <li>• <strong>Stamp Duty:</strong> State-based transfer duty (typically 1-5% of property value)</li>
+                                    <li>• <strong>Legal Fees:</strong> Conveyancing and solicitor costs ($800-$2,500)</li>
+                                    <li>• <strong>Building & Pest Inspections:</strong> ($300-$600)</li>
+                                    <li>• <strong>Lenders Mortgage Insurance (LMI):</strong> If deposit is less than 20%</li>
+                                    <li>• <strong>Loan Application Fees:</strong> ($200-$800)</li>
+                                    <li>• <strong>Valuation Fees:</strong> ($200-$600)</li>
+                                    <li>• <strong>Moving Costs:</strong> Removalists, cleaning, etc.</li>
+                                    <li>• <strong>Council Rates & Utilities:</strong> Transfer fees and connections</li>
+                                    <li>• <strong>Real Estate Agent Commission:</strong> When selling (typically 1.5-3%)</li>
+                                  </ul>
+                                  <p className="mt-2 text-xs">
+                                    These costs can significantly impact your actual profit or loss. Consider consulting with a financial advisor or conveyancer for accurate cost estimates.
+                                  </p>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </AlertDescription>
+                          </Alert>
+                        </div>
                       </div>
                     </div>
                   </div>
