@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +70,60 @@ function ResultsSuspense() {
   const [showOverpayment, setShowOverpayment] = useState(true);
   const [sellAfterYears, setSellAfterYears] = useState("10");
   const [isAdditionalCostsOpen, setIsAdditionalCostsOpen] = useState(false);
+  // Add state for collapsible open/close
+  const [isYearlyTableOpen, setIsYearlyTableOpen] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState({
+    propertyPrice: searchParams.get("propertyPrice") || "",
+    deposit: searchParams.get("deposit") || "",
+    loanTerm: searchParams.get("loanTerm") || "",
+    interestRate: searchParams.get("interestRate") || "",
+  });
 
+  useEffect(() => {
+    setEditValues({
+      propertyPrice: searchParams.get("propertyPrice") || "",
+      deposit: searchParams.get("deposit") || "",
+      loanTerm: searchParams.get("loanTerm") || "",
+      interestRate: searchParams.get("interestRate") || "",
+    });
+  }, [searchParams]);
+
+  // Inline edit handler
+  const handleInlineEdit = (field: string) => {
+    setEditingField(field);
+  };
+
+  const handleInlineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const saveInlineEdit = (field: string) => {
+    // Update URL search params
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(field, editValues[field as keyof typeof editValues]);
+    window.location.search = params.toString();
+    setEditingField(null);
+  };
+
+  const handleInlineBlur = (field: string) => {
+    saveInlineEdit(field);
+  };
+
+  const handleInlineKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, field: string) => {
+    if (e.key === "Enter") {
+      saveInlineEdit(field);
+    } else if (e.key === "Escape") {
+      setEditValues({
+        propertyPrice: searchParams.get("propertyPrice") || "",
+        deposit: searchParams.get("deposit") || "",
+        loanTerm: searchParams.get("loanTerm") || "",
+        interestRate: searchParams.get("interestRate") || "",
+      });
+      setEditingField(null);
+    }
+  };
 
   const results = useMemo<ResultsData | null>(() => {
     const propertyPrice = Number(searchParams.get("propertyPrice"));
@@ -261,31 +314,116 @@ function ResultsSuspense() {
           <CardContent className="p-4 md:p-6">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <p className="text-primary-foreground/80 text-sm mb-2">
-                  Loan Summary
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-primary-foreground/80 text-sm">Loan Summary</p>
+                </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
+                  {/* Inline editable fields */}
                   <p>Property Price:</p>
-                  <p className="text-right">
-                    {formatCurrency(Number(searchParams.get("propertyPrice")))}
-                  </p>
+                  <div className="text-right" onDoubleClick={() => handleInlineEdit("propertyPrice")}>{
+                    editingField === "propertyPrice" ? (
+                      <Input
+                        id="propertyPrice"
+                        name="propertyPrice"
+                        type="number"
+                        value={editValues.propertyPrice}
+                        onChange={e => {
+                          const value = e.target.value;
+                          if (/^\d*$/.test(value)) {
+                            setEditValues(prev => ({ ...prev, propertyPrice: value }));
+                          }
+                        }}
+                        onBlur={() => handleInlineBlur("propertyPrice")}
+                        onKeyDown={e => handleInlineKeyDown(e, "propertyPrice")}
+                        className="bg-white/10 border-0 text-primary-foreground"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="cursor-pointer" title="Double click to edit">{formatCurrency(Number(searchParams.get("propertyPrice")))}</span>
+                    )
+                  }</div>
                   <p>Deposit:</p>
-                  <p className="text-right">
-                    {formatCurrency(Number(searchParams.get("deposit")))}
-                  </p>
+                  <div className="text-right" onDoubleClick={() => handleInlineEdit("deposit")}>{
+                    editingField === "deposit" ? (
+                      <Input
+                        id="deposit"
+                        name="deposit"
+                        type="number"
+                        value={editValues.deposit}
+                        onChange={e => {
+                          const value = e.target.value;
+                          if (/^\d*$/.test(value)) {
+                            setEditValues(prev => ({ ...prev, deposit: value }));
+                          }
+                        }}
+                        onBlur={() => handleInlineBlur("deposit")}
+                        onKeyDown={e => handleInlineKeyDown(e, "deposit")}
+                        className="bg-white/10 border-0 text-primary-foreground mt-2"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="cursor-pointer" title="Double click to edit">{formatCurrency(Number(searchParams.get("deposit")))}</span>
+                    )
+                  }</div>
                   <p>Loan Amount:</p>
                   <p className="text-right">
                     {formatCurrency(results.totalPrincipal)}
                   </p>
                   <p>Loan Term:</p>
-                  <p className="text-right">
-                    {searchParams.get("loanTerm")}
-                    {" "}years
-                  </p>
+                  <div className="text-right" onDoubleClick={() => handleInlineEdit("loanTerm")}>{
+                    editingField === "loanTerm" ? (
+                      <Input
+                        id="loanTerm"
+                        name="loanTerm"
+                        type="number"
+                        value={editValues.loanTerm}
+                        onChange={e => {
+                          const value = e.target.value;
+                          if (/^\d*$/.test(value)) {
+                            setEditValues(prev => ({ ...prev, loanTerm: value }));
+                          }
+                        }}
+                        onBlur={() => handleInlineBlur("loanTerm")}
+                        onKeyDown={e => handleInlineKeyDown(e, "loanTerm")}
+                        className="bg-white/10 border-0 text-primary-foreground mt-2"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="cursor-pointer" title="Double click to edit">{searchParams.get("loanTerm")} years</span>
+                    )
+                  }</div>
                   <p>Interest Rate:</p>
-                  <p className="text-right">
-                    {searchParams.get("interestRate")}%
-                  </p>
+                  <div className="text-right" onDoubleClick={() => handleInlineEdit("interestRate")}>{
+                    editingField === "interestRate" ? (
+                      <Input
+                        id="interestRate"
+                        name="interestRate"
+                        type="number"
+                        value={editValues.interestRate}
+                        onChange={e => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            setEditValues(prev => ({ ...prev, interestRate: value }));
+                          }
+                        }}
+                        onBlur={() => handleInlineBlur("interestRate")}
+                        onKeyDown={e => handleInlineKeyDown(e, "interestRate")}
+                        className="bg-white/10 border-0 text-primary-foreground mt-2"
+                        inputMode="decimal"
+                        pattern="[0-9.]*"
+                        step="0.1"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="cursor-pointer" title="Double click to edit">{searchParams.get("interestRate")}%</span>
+                    )
+                  }</div>
                 </div>
               </div>
               <div className="text-center flex flex-col justify-center">
@@ -301,7 +439,7 @@ function ResultsSuspense() {
         </Card>
         {/* Tabs below summary */}
         <Tabs defaultValue="breakdown-amortization" className="w-full">
-          <TabsList className="mb-4 w-full grid grid-cols-1 md:grid-cols-2">
+          <TabsList className="mb-4 w-full grid grid-cols-2">
             <TabsTrigger value="breakdown-amortization">Breakdown & Amortization</TabsTrigger>
             <TabsTrigger value="projections">Property Projections</TabsTrigger>
           </TabsList>
@@ -340,26 +478,33 @@ function ResultsSuspense() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 md:px-6">
-                <p className="text-sm">
-                  You start paying more towards principal than interest in{" "}
-                  <span className="text-primary font-semibold">
+                <div className="flex justify-between gap-2 items-center">
+
+                  <p className="text-sm text-muted-foreground">
+                    The time it takes to start paying more towards principal than interest
+
+                  </p>
+                  <span className="text-primary font-semibold text-right">
+
                     {principalExceedsInterestMonth
                       ? formatPrincipalExceedsInterestTime(
                         principalExceedsInterestMonth
                       )
                       : null}
                   </span>
-                  .
-                </p>
+
+                </div>
                 {principalExceedsInterestMonth && (
                   (() => {
                     const milestoneIdx = principalExceedsInterestMonth - 1;
                     const milestoneMonth = results.schedule[milestoneIdx];
                     if (!milestoneMonth) return null;
                     return (
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        <div>Total principal paid to this date: <span className="font-semibold text-primary">{formatCurrency(milestoneMonth.totalPrincipal)}</span></div>
-                        <div>Total interest paid to this date: <span className="font-semibold text-destructive">{formatCurrency(milestoneMonth.totalInterest)}</span></div>
+                      <div className="text-muted-foreground text-sm mt-2 gap-2 grid">
+                        <div className="flex justify-between"><p>Total principal </p>
+                          <span className="font-semibold text-primary">{formatCurrency(milestoneMonth.totalPrincipal)}</span>
+                        </div>
+                        <div className="flex justify-between"><p>Total interest</p><span className="font-semibold text-destructive">{formatCurrency(milestoneMonth.totalInterest)}</span></div>
                       </div>
                     );
                   })()
@@ -394,21 +539,21 @@ function ResultsSuspense() {
                         bottom: 5,
                       }}
                     >
-                      {/* <CartesianGrid
+                      <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="hsl(var(--muted))"
-                      /> */}
+                      />
                       <XAxis
                         dataKey="month"
                         label={{
                           value: "Month",
                           position: "insideBottom",
-                          offset: -5,
+                          offset: -8,
                         }}
                         domain={[1, results.schedule.length]}
                         type="number"
                         allowDuplicatedCategory={false}
-                        tickFormatter={(value) => (value % 12 === 0 ? `Year ${value / 12}` : '')}
+
                       />
                       <YAxis
                         label={{
@@ -424,7 +569,7 @@ function ResultsSuspense() {
                         ]}
                         labelFormatter={(label) => `Month ${label}`}
                       />
-                      <Legend />
+                      <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '10px' }} />
                       <Line
                         type="monotone"
                         dataKey="principalPayment"
@@ -474,52 +619,59 @@ function ResultsSuspense() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                {showOverpayment && extraPayment && <p className="text-xs text-muted-foreground mt-2 mb-4 text-center max-w-2xl mx-auto">
+                {!!showOverpayment && +extraPayment > 0 ? <p className="text-xs text-muted-foreground mt-2 mb-4 text-center max-w-2xl mx-auto">
                   <strong>Note:</strong> The final overpayment may be less than previous months, resulting in a vertical drop. This is because the last payment only covers the remaining balance.
-                </p>}
+                </p> : null}
               </CardContent>
             </Card>
             {/* Yearly Principal vs Interest Table */}
-            <Card className="mb-4">
-              <CardHeader className="px-4 md:px-6">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="text-2xl">📅</span>
-                  Yearly Principal vs Interest
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 md:px-6">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-left font-semibold">Year</TableHead>
-                        <TableHead className="text-right font-semibold">Principal Paid</TableHead>
-                        <TableHead className="text-right font-semibold">Interest Paid</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const years = Math.ceil(results.schedule.length / 12);
-                        const rows = [];
-                        for (let y = 1; y <= years; y++) {
-                          const yearMonths = results.schedule.slice((y - 1) * 12, y * 12);
-                          const principal = yearMonths.reduce((sum, m) => sum + m.principalPayment, 0);
-                          const interest = yearMonths.reduce((sum, m) => sum + m.interestPayment, 0);
-                          rows.push(
-                            <TableRow key={y}>
-                              <TableCell className="text-left">{y}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(principal)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(interest)}</TableCell>
-                            </TableRow>
-                          );
-                        }
-                        return rows;
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <Collapsible open={isYearlyTableOpen} onOpenChange={setIsYearlyTableOpen}>
+              <Card className="mb-4">
+                <CardHeader className="px-4 md:px-6 flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">📅</span>
+                    <CardTitle className="text-lg">Yearly Principal vs Interest</CardTitle>
+                  </div>
+                  <CollapsibleTrigger className="text-sm font-medium text-primary hover:underline px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-primary">
+                    {isYearlyTableOpen ? 'Hide Table' : 'Show Table'}
+                  </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                  <CardContent className="px-4 md:px-6">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-left font-semibold">Year</TableHead>
+                            <TableHead className="text-right font-semibold">Principal Paid</TableHead>
+                            <TableHead className="text-right font-semibold">Interest Paid</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(() => {
+                            const years = Math.ceil(results.schedule.length / 12);
+                            const rows = [];
+                            for (let y = 1; y <= years; y++) {
+                              const yearMonths = results.schedule.slice((y - 1) * 12, y * 12);
+                              const principal = yearMonths.reduce((sum, m) => sum + m.principalPayment, 0);
+                              const interest = yearMonths.reduce((sum, m) => sum + m.interestPayment, 0);
+                              rows.push(
+                                <TableRow key={y}>
+                                  <TableCell className="text-left">{y}</TableCell>
+                                  <TableCell className="text-right">{formatCurrency(principal)}</TableCell>
+                                  <TableCell className="text-right">{formatCurrency(interest)}</TableCell>
+                                </TableRow>
+                              );
+                            }
+                            return rows;
+                          })()}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
             {/* Overpayment Analysis Table */}
             <Card className="bg-primary/10 border-primary/20 overflow-hidden mb-4">
               <CardHeader className="px-4 md:px-6">
@@ -546,12 +698,13 @@ function ResultsSuspense() {
                       Extra Monthly Payment ($)
                     </Label>
                     <Input
+
                       id="extraPayment"
                       type="text"
                       min={0}
                       value={extraPayment}
                       onChange={handleExtraPaymentChange}
-                      className="mt-1"
+                      className="mt-1 bg-primary/10"
                       inputMode="numeric"
                       pattern="[0-9]*"
                     />
@@ -697,8 +850,8 @@ function ResultsSuspense() {
                         Projected Value at End of Loan
                       </p>
                       <p className={`text-2xl font-bold ${propertyProjections.projectedValue >= propertyProjections.requiredValue
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
+                        ? 'text-primary'
+                        : 'text-destructive'
                         }`}>
                         {formatCurrency(propertyProjections.projectedValue)}
                       </p>
@@ -712,26 +865,15 @@ function ResultsSuspense() {
                   <div className="bg-background/50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-medium">Investment Outlook</h4>
-                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${propertyProjections.projectedValue >= propertyProjections.requiredValue
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                        }`}>
-                        <span>
-                          {propertyProjections.projectedValue >= propertyProjections.requiredValue ? '✅' : '❌'}
-                        </span>
-                        {propertyProjections.projectedValue >= propertyProjections.requiredValue
-                          ? 'Profitable'
-                          : 'Loss-making'
-                        }
-                      </div>
+
                     </div>
                     <p className={`text-sm ${propertyProjections.projectedValue >= propertyProjections.requiredValue
-                      ? 'text-green-700 dark:text-green-300'
-                      : 'text-red-700 dark:text-red-300'
+                      ? 'text-primary '
+                      : 'text-destructive'
                       }`}>
                       {propertyProjections.projectedValue >= propertyProjections.requiredValue
-                        ? `Your property is projected to be worth ${formatCurrency(propertyProjections.projectedValue - propertyProjections.requiredValue)} more than the total loan cost.`
-                        : `Your property is projected to be worth ${formatCurrency(propertyProjections.requiredValue - propertyProjections.projectedValue)} less than the total loan cost.`
+                        ? <>Your property is projected to be worth <strong>{formatCurrency(propertyProjections.projectedValue - propertyProjections.requiredValue)}</strong> more than the total loan cost.</>
+                        : <>Your property is projected to be worth <strong>{formatCurrency(propertyProjections.requiredValue - propertyProjections.projectedValue)}</strong> less than the total loan cost.</>
                       }
                     </p>
                   </div>
@@ -774,7 +916,7 @@ function ResultsSuspense() {
               </Card>
 
               {/* Early Sale Scenario */}
-              <Card className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800 overflow-hidden">
+              <Card className="bg-secondary/10 border-secondary/20 overflow-hidden">
                 <CardHeader className="px-4 md:px-6">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <span className="text-2xl">🤝</span>
@@ -858,13 +1000,13 @@ function ResultsSuspense() {
 
                         {/* Additional Costs Alert */}
                         <div className="flex-1">
-                          <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-                            <AlertTitle className="text-orange-800 dark:text-orange-200">⚠️ Additional Costs Not Included</AlertTitle>
-                            <AlertDescription className="text-orange-700 dark:text-orange-300">
+                          <Alert className="border-secondary/30 bg-secondary/20">
+                            <AlertTitle className="text-secondary-foreground">⚠️ Additional Costs Not Included</AlertTitle>
+                            <AlertDescription className="text-secondary-foreground">
                               <p className="mb-2">This profit/loss calculation doesn't include common Australian property transaction costs.</p>
 
                               <Collapsible open={isAdditionalCostsOpen} onOpenChange={setIsAdditionalCostsOpen}>
-                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-orange-800 dark:text-orange-200 hover:text-orange-900 dark:hover:text-orange-100 transition-colors">
+                                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-secondary-foreground hover:text-primary transition-colors">
                                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isAdditionalCostsOpen ? 'rotate-180' : ''}`} />
                                   View additional costs
                                 </CollapsibleTrigger>
@@ -902,7 +1044,7 @@ function ResultsSuspense() {
           <Link href="/">Back to Calculator</Link>
         </Button>
       </div>
-    </main>
+    </main >
   );
 }
 export default function Results() {
