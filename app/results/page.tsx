@@ -351,6 +351,19 @@ function ResultsSuspense() {
                   </span>
                   .
                 </p>
+                {principalExceedsInterestMonth && (
+                  (() => {
+                    const milestoneIdx = principalExceedsInterestMonth - 1;
+                    const milestoneMonth = results.schedule[milestoneIdx];
+                    if (!milestoneMonth) return null;
+                    return (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        <div>Total principal paid to this date: <span className="font-semibold text-primary">{formatCurrency(milestoneMonth.totalPrincipal)}</span></div>
+                        <div>Total interest paid to this date: <span className="font-semibold text-destructive">{formatCurrency(milestoneMonth.totalInterest)}</span></div>
+                      </div>
+                    );
+                  })()
+                )}
               </CardContent>
             </Card>
             {/* Chart */}
